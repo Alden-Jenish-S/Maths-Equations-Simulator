@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080d18" />
+    <meta name="description" content="An interactive observatory for mathematical art. Explore attractors, unwrap curves, compose harmonics, and watch physical systems evolve." />
+    <title>Trace Explorer · Mathematical Observatory</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#workspace">Skip to visualization</a>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="17"/><ellipse cx="24" cy="24" rx="9" ry="22" transform="rotate(45 24 24)"/><path d="M3 24h42M24 3v42"/><circle cx="36" cy="12" r="3" class="brand-star"/></svg>
+          <div><p class="eyebrow">A MATHEMATICAL OBSERVATORY</p><h1>Trace <span>Explorer</span><sup>STUDIO</sup></h1></div>
+        </div>
+        <div class="top-actions">
+          <span class="status-pill" id="status-pill"><span class="status-dot" aria-hidden="true"></span><span id="status-text" role="status">Opening observatory</span></span>
+          <button class="button export-button" id="snapshot-button" type="button" title="Re-render a high-resolution PNG (E)"><span aria-hidden="true">↗</span> Export PNG</button>
+        </div>
+      </header>
+
+      <nav class="mode-switch" aria-label="Studio mode">
+        <button class="mode-button active" type="button" data-mode="atlas" id="discovery-mode-button" aria-pressed="true"><span class="mode-icon" aria-hidden="true">✧</span><span><b>Atlas</b><small>Strange attractors</small></span><span class="mode-index">01</span></button>
+        <button class="mode-button" type="button" data-mode="unwrap" aria-pressed="false"><span class="mode-icon" aria-hidden="true">◌</span><span><b>Unwrap</b><small>Geometry → waves</small></span><span class="mode-index">02</span></button>
+        <button class="mode-button" type="button" data-mode="fourier" aria-pressed="false"><span class="mode-icon" aria-hidden="true">∿</span><span><b>Fourier</b><small>Shape of sound</small></span><span class="mode-index">03</span></button>
+        <button class="mode-button" type="button" data-mode="spirograph" aria-pressed="false"><span class="mode-icon" aria-hidden="true">❋</span><span><b>Spirograph</b><small>Rolling orbits</small></span><span class="mode-index">04</span></button>
+        <button class="mode-button" type="button" data-mode="pendulum" aria-pressed="false"><span class="mode-icon" aria-hidden="true">⌁</span><span><b>Pendulum</b><small>Coupled chaos</small></span><span class="mode-index">05</span></button>
+        <button class="mode-button" type="button" data-mode="live" id="live-mode-button" aria-pressed="false"><span class="mode-icon" aria-hidden="true">≋</span><span><b>Live</b><small>Signal laboratory</small></span><span class="mode-index">06</span></button>
+      </nav>
+
+      <div class="app-grid">
+        <aside class="control-rail glass" aria-label="Instrument controls">
+          <div class="rail-heading"><span class="section-kicker">INSTRUMENT PANEL</span><span class="rail-indicator" aria-hidden="true">⌘</span></div>
+          <section class="control-section" id="atlas-controls">
+            <label for="family-select">Dynamical system</label><select id="family-select"></select>
+            <label for="discovery-select">Discovery collection</label><select id="discovery-select"></select>
+            <p class="control-hint" id="family-description"></p>
+            <div id="parameter-controls"></div>
+            <label for="projection-select">Projection</label><select id="projection-select"><option value="x-y">x · y plane</option><option value="x-z">x · z plane</option><option value="y-z">y · z plane</option></select>
+            <div class="button-pair"><button class="button button-primary" id="regenerate-button" type="button">Regenerate ↻</button><button class="button" id="reset-button" type="button">Restore</button></div>
+            <p class="micro-note">Simulation + analysis run in a worker. Edited parameters create a fresh trajectory.</p>
+          </section>
+          <section class="control-section" id="unwrap-controls" hidden>
+            <label for="curve-select">Parametric curve</label><select id="curve-select"></select>
+            <p class="control-hint" id="curve-description"></p><div id="curve-parameter-controls"></div>
+            <div class="section-kicker subsection">PARAMETER DOMAIN</div>
+            <div class="field-pair"><div><label for="domain-start">Start t</label><input id="domain-start" type="number" step="0.1" /></div><div><label for="domain-end">End t</label><input id="domain-end" type="number" step="0.1" /></div></div>
+            <label for="phase-control">Scrub parameter <output id="phase-output" for="phase-control">0%</output></label><input id="phase-control" type="range" min="0" max="1" step="0.001" value="0" />
+            <label for="unwrap-projection-select">Geometry projection</label><select id="unwrap-projection-select"><option value="function">Function / x · y · z</option><option value="moving-frame">Moving frame / T · N</option></select>
+            <label for="channel-set-select">Waveform channels</label><select id="channel-set-select"><option value="function">Function channels</option><option value="moving-frame">Moving frame channels</option></select>
+            <label for="waveform-display-select">Waveform display</label><select id="waveform-display-select"><option value="scrolling-history">Scrolling history</option><option value="domain-preview">Domain preview</option></select>
+            <label class="checkbox-label"><input id="vectors-toggle" type="checkbox" checked /> Tangent, normal & curvature</label>
+            <label class="checkbox-label"><input id="osculating-toggle" type="checkbox" /> Osculating circle</label>
+            <p class="micro-note">History samples every 1/120 simulation second. Loops and poles break paths; edits clear the buffer. Velocity is dr/dt, with t the curve parameter. N/κ uses true geometry; long arrows are visibly capped and off-scale circles omitted.</p>
+          </section>
+          <section class="control-section" id="fourier-controls" hidden>
+            <label for="harmonic-preset-select">Harmonic recipe / timbre</label><select id="harmonic-preset-select"></select>
+            <div id="fourier-parameter-controls"></div>
+            <details class="harmonic-details"><summary>Edit the equation <span>amplitude · frequency · phase</span></summary>
+              <div class="harmonic-editor" id="harmonic-editor"></div><button class="button full-width" id="add-harmonic-button" type="button">+ Add harmonic</button>
+            </details>
+            <div class="section-kicker subsection">LISTEN TO THE EQUATION</div>
+            <div id="audio-parameter-controls"></div>
+            <label class="checkbox-label"><input id="audio-mute-toggle" type="checkbox" checked /> Mute audio</label>
+            <button class="button button-primary full-width" id="audio-button" type="button" aria-pressed="false">Enable audio</button>
+            <p id="audio-status" class="micro-note" role="status">Audio starts only when you enable it.</p>
+            <p class="control-hint">The epicycles turn slowly so you can follow the sum. Audio evaluates the same harmonics at the selected pitch in Hz; its clock is independent of visual speed. Preset, count, and edits shape the timbre.</p>
+          </section>
+          <section class="control-section" id="spirograph-controls" hidden>
+            <label for="spirograph-select">Rolling construction</label><select id="spirograph-select"><option value="hypotrochoid">Hypotrochoid · inside</option><option value="epitrochoid">Epitrochoid · outside</option><option value="rose">Rose · polar oscillator</option></select>
+            <div id="spirograph-parameter-controls"></div><p class="control-hint">Each pen has its own angular offset on the moving gear. The highlighted contact tracks the rolling construction. A rose is a polar oscillator, not a rolling gear.</p>
+          </section>
+          <section class="control-section" id="pendulum-controls" hidden>
+            <p class="control-hint first-hint">Two coupled masses, one sensitive trajectory. Change a physical parameter or initial angle to restart the experiment.</p>
+            <div id="pendulum-parameter-controls"></div><p class="micro-note">Fixed 1/240 s RK4 steps. Phase portrait: θ₁ versus θ₂, wrapped to ±π for display. Invalid states freeze rather than being clipped.</p>
+          </section>
+          <section class="control-section" id="live-controls" hidden>
+            <label for="live-system-select">Signal source</label><select id="live-system-select"></select><p class="control-hint" id="live-description"></p><div id="live-parameter-controls"></div>
+            <p class="micro-note">Deterministic streaming sources. The synthetic ECG-like signal is a visual model, not medical data.</p>
+          </section>
+          <details class="appearance" open><summary>Display & atmosphere <span aria-hidden="true">＋</span></summary>
+            <label for="theme-select">Color palette</label><select id="theme-select"></select>
+            <label for="persistence-control">Trail persistence <output id="persistence-output" for="persistence-control">70%</output></label><input id="persistence-control" type="range" min="0.05" max="1" step="0.01" value="0.7" />
+            <label for="glow-control">Luminous bloom <output id="glow-output" for="glow-control">55%</output></label><input id="glow-control" type="range" min="0" max="1" step="0.01" value="0.55" />
+            <p class="micro-note">Layered Canvas2D bloom. Atlas colors encode adjacent-step displacement (maps/replays) or finite-difference speed (fresh flows).</p>
+            <div class="toggle-row"><label class="checkbox-label"><input id="grid-toggle" type="checkbox" checked /> Grid</label><label class="checkbox-label"><input id="axes-toggle" type="checkbox" checked /> Axes</label></div>
+          </details>
+          <div class="rail-footer"><span class="tiny-orbit" aria-hidden="true">⊙</span> Made of equations. Open to discovery.</div>
+        </aside>
+
+        <section class="workspace" id="workspace" tabindex="-1" aria-label="Mathematical visualization">
+          <div class="canvas-card glass">
+            <header class="canvas-header"><div><div class="section-kicker"><span class="live-dot" aria-hidden="true"></span><span id="trace-kind">DYNAMICAL ATLAS</span> <span class="header-slash">/</span> <span id="scene-index">01</span></div><h2 id="trace-title">Preparing the observatory</h2></div><div class="canvas-meta"><span id="render-status">Initializing…</span><span class="class-badge" id="class-badge">EXPERIMENT</span></div></header>
+            <div class="canvas-wrap"><canvas id="trace-canvas" role="img" aria-label="Interactive mathematical scene" aria-describedby="canvas-description"></canvas><div class="canvas-corner top-left" aria-hidden="true"></div><div class="canvas-corner bottom-right" aria-hidden="true"></div><div class="canvas-overlay" id="canvas-overlay" role="status">Preparing trajectory…</div><span class="plot-watermark" aria-hidden="true">TRACE / OBSERVATORY</span></div>
+            <div class="transport" role="group" aria-label="Playback controls">
+              <button class="button play-button" id="playback-button" type="button" aria-pressed="true" title="Play or pause (Space)">Ⅱ Pause</button><button class="button reset-transport" id="restart-button" type="button" title="Restart scene (R)"><span aria-hidden="true">↺</span> Reset</button>
+              <div class="speed-field"><label for="speed-control">SPEED <output id="speed-output" for="speed-control">1.00×</output></label><input id="speed-control" type="range" min="0.1" max="3" step="0.05" value="1" /></div>
+             <span id="time-readout" class="time-readout">t = 0.000</span>
+            </div>
+            <div class="coordinate-readout" id="coordinate-readout" aria-live="polite">x — · y — · z —</div>
+            <p id="canvas-description" class="canvas-description">Select an instrument to explore its geometry.</p>
+          </div>
+          <section class="insight-grid" aria-label="Scene readouts"><div class="equation-card glass"><div class="section-kicker">THE UNDERLYING EQUATION</div><p class="equation" id="equation-text">—</p><p class="equation-note" id="scene-note">Deterministic systems. Visible structure.</p><div class="equation-meta"><span id="config-summary">—</span><span id="seed-summary">—</span></div></div><div class="metrics-section glass"><div class="metrics-heading-row"><h3 id="metrics-heading">Instrument readings</h3><span class="sample-label">5 Hz MAX</span></div><div class="metrics-grid" id="metrics-grid"></div></div></section>
+          <footer class="workspace-footer"><span>Explore slowly. Notice what changes.</span><span><kbd>Space</kbd> play/pause <kbd>R</kbd> reset <kbd>E</kbd> export</span><a href="docs/METHODOLOGY.md">Method & provenance ↗</a></footer>
+        </section>
+      </div>
+    </main>
+    <noscript><p class="noscript">Trace Explorer needs JavaScript to calculate and draw its mathematical scenes.</p></noscript>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "trace-explorer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "explore": "node scripts/explore.mjs",
+    "validate": "node scripts/validate.mjs",
+    "adversarial": "node scripts/adversarial.mjs",
+    "live-test": "node scripts/live-test.mjs",
+    "art-test": "node scripts/art-test.mjs",
+    "audio-test": "node scripts/audio-test.mjs",
+    "ui-test": "node scripts/ui-test.mjs",
+    "repro-test": "node scripts/repro-test.mjs",
+    "benchmark": "node scripts/benchmark.mjs",
+    "test": "node scripts/test.mjs"
+  }
+}

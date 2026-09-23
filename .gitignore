@@ -1,0 +1,10 @@
+.venv/
+node_modules/
+.DS_Store
+*.log
+coverage/
+.cache/
+.env
+.env.*
+!.env.example
+Example Samples/
