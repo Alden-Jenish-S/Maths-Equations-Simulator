@@ -7,7 +7,7 @@ The app has six modes sharing one visual transport. The **Signal laboratory** us
 | Mode / UI name | Source and clock | Display and edit semantics |
 | --- | --- | --- |
 | `atlas` / Dynamical atlas | Cached or worker-computed batch trajectory. Transport time moves a cursor through that trajectory; it does not integrate new samples. | Coordinate projections use retained raw points. Parameter edits request another trajectory. Projection and palette edits do not change the underlying dynamics. |
-| `unwrap` / Parametric study | `curveFrame(id, params, t)` for fourteen curves. A dimensionless phase traverses the selected domain at 0.055 cycles per transport second. Scrolling history samples at 1/120 simulation second. | A shared history record aligns geometry and every channel at the same actual curve parameter `t`. The default scrolling history retains at most 900 records; domain preview shows a cached 961-sample domain. Curve/parameter/domain/channel edits and manual phase scrubbing reset history. |
+| `unwrap` / Parametric study | `curveFrame(id, params, t)` for seventeen curves. A dimensionless phase traverses the selected domain at 0.055 cycles per transport second. Scrolling history samples at 1/120 simulation second. | A shared history record aligns geometry and every channel at the same actual curve parameter `t`. The default scrolling history retains at most 900 records; domain preview shows a cached 961-sample domain. Curve/parameter/domain/channel edits and manual phase scrubbing reset history. |
 | `fourier` / Harmonic observatory | Visual phase advances at 0.8 radians per transport second. Audio uses the device sample clock and the selected pitch in Hz. | Edited amplitudes, frequency multipliers, phases, and term counts immediately rebuild the visual equation at the current phase. Audio updates the same equation with its own transition ramp. |
 | `spirograph` / Rolling gear laboratory | Rolling parameter advances at 0.8 radians per transport second over a cached finite domain. | Hypotrochoid, epitrochoid, and rose paths use phase-offset pens. Parameter edits rebuild the geometry and restart its visual phase. The rose is a polar oscillator, not a rolling-contact construction. |
 | `pendulum` / Nonlinear dynamics | The double-pendulum model in `art-modes.js` receives repeated 1/240-second steps. | Physical bob trails and an angle–angle portrait share each integrated state. UI parameter edits restart this model. Angles remain unwrapped numerically; only the portrait is wrapped to ±π, with path gaps at wraps. |
@@ -133,7 +133,7 @@ See [GEOMETRY.md](GEOMETRY.md) for curve and double-pendulum definitions, [AUDIO
 
 Run `npm run live-test` (or `node scripts/live-test.mjs`). The test compares complete 2,400-step default and edited sequences for every live source, including irregular scheduling groups and serialized midstream resume. It checks initial frames, actual retained timestamps, oversized requests, variable steps, all parameter-box corners, invalid inputs, frozen guard failures, the analytic unforced linear limit of Van der Pol, and conservative/damped live-pendulum energy.
 
-Integration checks compare all fourteen `curveFrame` point/channel streams with exact pole-aligned batch samples, compare every double-pendulum frame/state across repeated-step chunk groupings and edits, and verify edited epicycle sums and exact Float32 audio samples at aligned offsets. The script then **imports and awaits** `scripts/art-test.mjs` and `scripts/audio-test.mjs`, including the latter's asynchronous controller tests. A failed import or assertion prevents the final combined pass line. These are Node numerical/API tests; they do not certify real browser rendering or physical audio-device behavior.
+Integration checks compare all seventeen `curveFrame` point/channel streams with exact pole-aligned batch samples, compare every double-pendulum frame/state across repeated-step chunk groupings and edits, and verify edited epicycle sums and exact Float32 audio samples at aligned offsets. The script then **imports and awaits** `scripts/art-test.mjs` and `scripts/audio-test.mjs`, including the latter's asynchronous controller tests. A failed import or assertion prevents the final combined pass line. These are Node numerical/API tests; they do not certify real browser rendering or physical audio-device behavior.
 
 ### Streaming hardening acceptance gates
 
@@ -149,8 +149,8 @@ Scope: `src/live.js`, `scripts/live-test.mjs`, and this document.
   EVIDENCE: LIVE_TEST_PASS includes history=ok guards=ok; assertions cover t=0, variable dt, count beyond history, and transactional RK4 failures.
 - [x] L3: Aligned geometry, harmonic edits, grouped pendulum streams, and both imported suites pass before the combined result.
   CHECK: node scripts/live-test.mjs
-  EXPECT: /curves=14 audio=ok epicycles=ok physics=ok/
-  EVIDENCE: ART_TEST_PASS curves=14 physics=ok; AUDIO_TEST_PASS audio=ok epicycles=ok; LIVE_TEST_PASS includes curves=14 audio=ok epicycles=ok physics=ok.
+  EXPECT: /curves=17 audio=ok epicycles=ok physics=ok/
+  EVIDENCE: ART_TEST_PASS curves=17 physics=ok; AUDIO_TEST_PASS audio=ok epicycles=ok; LIVE_TEST_PASS includes curves=17 audio=ok epicycles=ok physics=ok.
 - [x] L4: Documentation covers the current six modes, clocks, projections, and numerical/display limitations.
   EVIDENCE: This document's clock table, Frame scheduling, Incremental API, Retained history, and Projection sections were checked against src/app.js, src/studio-renderer.js, src/art-modes.js, src/audio.js, and src/live.js.
 

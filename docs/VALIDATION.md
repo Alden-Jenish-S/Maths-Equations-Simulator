@@ -13,7 +13,7 @@ The script checks:
 - exactly nine registered systems with non-empty equations and parameter schemas;
 - a bounded, finite reference sample for each family;
 - deterministic repeatability of complete trajectories under identical configuration;
-- finite default samples for all fourteen generalized curves;
+- finite default samples for all seventeen generalized curves;
 - fixed-duration RK4 refinement evidence for the five added continuous systems;
 - explicit execution of a Hénon unstable/escape path.
 

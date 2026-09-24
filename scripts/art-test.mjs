@@ -13,14 +13,15 @@ import {
   stepDoublePendulum,
 } from "../src/art-modes.js";
 
+const TAU = 2 * Math.PI;
 const close = (actual, expected, tolerance, message) => {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${message}: ${actual} ≠ ${expected}`);
 };
 const pointDistance = (left, right) => Math.hypot(...left.map((value, index) => value - right[index]));
 const assertFinitePoint = (point, label) => assert.ok(point.every(Number.isFinite), `${label} is not finite`);
 
-assert.equal(CURVE_LIST.length, 14, "the contract requires all 14 curves");
-assert.equal(Object.keys(CURVES).length, 14, "curve lookup and curve list disagree");
+assert.equal(CURVE_LIST.length, 17, "the contract requires all 17 curves");
+assert.equal(Object.keys(CURVES).length, 17, "curve lookup and curve list disagree");
 for (const definition of CURVE_LIST) {
   assert.ok(definition.id && definition.name && definition.family && definition.equation && definition.description);
   assert.deepEqual(Object.keys(definition.defaults), Object.keys(definition.parameters), `${definition.id} defaults/schema mismatch`);
@@ -84,6 +85,41 @@ close(helix.curvature, 2 / (2 ** 2 + 0.5 ** 2), 1e-12, "helix curvature");
 close(Math.hypot(...helix.tangent), 1, 1e-12, "helix tangent normalization");
 assertFinitePoint(helix.normal, "helix normal");
 
+const finiteDifferenceTangent = (id, params, t, h = 1e-6) => {
+  const before = curveFrame(id, params, t - h).point, after = curveFrame(id, params, t + h).point;
+  const derivative = after.map((value, index) => (value - before[index]) / (2 * h));
+  const speed = Math.hypot(...derivative);
+  return derivative.map((value) => value / speed);
+};
+const finiteDifferenceCurvature = (id, params, t, h = 1e-5) => {
+  const before = curveFrame(id, params, t - h), after = curveFrame(id, params, t + h), center = curveFrame(id, params, t);
+  return Math.hypot(...after.tangent.map((value, index) => (value - before.tangent[index]) / (2 * h))) / center.speed;
+};
+const assertVectorClose = (actual, expected, tolerance, label) => {
+  assert.equal(actual.length, expected.length, `${label} dimension`);
+  actual.forEach((value, index) => close(value, expected[index], tolerance, `${label}[${index}]`));
+};
+
+const lissajousParams = { A: 2, B: 1.25, a: 3, b: 2, delta: .4 }, lissajous = curveFrame("lissajous", lissajousParams, .37);
+close(lissajous.point[0], 2 * Math.sin(3 * .37 + .4), 1e-14, "Lissajous x equation");
+close(lissajous.point[1], 1.25 * Math.sin(2 * .37), 1e-14, "Lissajous y equation");
+assertVectorClose(lissajous.tangent, finiteDifferenceTangent("lissajous", lissajousParams, .37), 2e-9, "Lissajous analytic tangent");
+close(lissajous.curvature, finiteDifferenceCurvature("lissajous", lissajousParams, .37), 2e-7, "Lissajous analytic curvature");
+
+const torusParams = { R: 3, r: .75, p: 2, q: 3 }, torus = curveFrame("torus-knot", torusParams, .73);
+close((Math.hypot(torus.point[0], torus.point[1]) - 3) ** 2 + torus.point[2] ** 2, .75 ** 2, 2e-12, "torus-knot torus identity");
+assertVectorClose(torus.tangent, finiteDifferenceTangent("torus-knot", torusParams, .73), 2e-9, "torus-knot analytic tangent");
+close(torus.curvature, finiteDifferenceCurvature("torus-knot", torusParams, .73), 2e-7, "torus-knot analytic curvature");
+close(pointDistance(curveFrame("torus-knot", torusParams, 0).point, curveFrame("torus-knot", torusParams, TAU).point), 0, 2e-14, "torus-knot closure");
+
+const mappedParams = { cx: -.1, cy: .2, rho: 1.1, a: .8 }, mappedT = .73;
+const mapped = curveFrame("joukowsky", mappedParams, mappedT), sx = mappedParams.cx + mappedParams.rho * Math.cos(mappedT), sy = mappedParams.cy + mappedParams.rho * Math.sin(mappedT), denominator = sx * sx + sy * sy;
+close(mapped.point[0], sx * (1 + mappedParams.a ** 2 / denominator), 1e-13, "Joukowsky real mapping");
+close(mapped.point[1], sy * (1 - mappedParams.a ** 2 / denominator), 1e-13, "Joukowsky imaginary mapping");
+assertVectorClose(mapped.tangent, finiteDifferenceTangent("joukowsky", mappedParams, mappedT), 2e-9, "Joukowsky analytic tangent");
+close(mapped.curvature, finiteDifferenceCurvature("joukowsky", mappedParams, mappedT), 2e-7, "Joukowsky analytic curvature");
+assert.equal(curveFrame("joukowsky", {}, 0).speed, 0, "default Joukowsky cusp should have zero speed");
+
 assert.deepEqual(spirographPoint({}, 0), spirographPoint(SPIROGRAPH_DEFAULTS, 0), "spirograph defaults differ");
 const defaultSpiro = generateSpirograph({}, 1201);
 assert.equal(defaultSpiro.metadata.closed, true);
@@ -118,6 +154,9 @@ assert.ok(doublePendulumFrame(damped, { ...PENDULUM_DEFAULTS, damping: 0.25 }).e
 assert.throws(() => sampleCurve("not-a-curve"), /Unknown curve/);
 assert.throws(() => sampleCurve("circle", { radius: NaN }), /finite number/);
 assert.throws(() => sampleCurve("circle", {}, 1), /\[2/);
+assert.throws(() => curveFrame("lissajous", { a: 1.5 }), /integer/);
+assert.throws(() => curveFrame("torus-knot", { R: .5, r: .75 }), /R > r/);
+assert.throws(() => curveFrame("joukowsky", { cx: 1, rho: 1 }), /stay away/);
 assert.throws(() => spirographPoint({ mode: "unknown" }), /Unknown spirograph/);
 assert.throws(() => spirographPoint({ R: 2, r: 3 }), /R >= r/);
 assert.throws(() => createDoublePendulum({ omega1: Infinity }), /finite number/);

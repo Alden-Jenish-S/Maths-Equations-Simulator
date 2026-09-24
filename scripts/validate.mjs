@@ -146,7 +146,7 @@ function validateBadInputs() {
 }
 
 function validateCurves() {
-  assert.equal(CURVE_LIST.length, 14, "the generalized curve catalogue must contain fourteen curves");
+  assert.equal(CURVE_LIST.length, 17, "the generalized curve catalogue must contain seventeen curves");
   for (const curve of CURVE_LIST) {
     const sample = sampleCurve(curve.id, curve.defaults, 96);
     assert.equal(sample.points.length, 96, `${curve.id} sample count mismatch`);

@@ -5,6 +5,7 @@ const MAX_SAMPLES = 100000;
 
 const parameter = (label, min, max, step, value) => Object.freeze({ label, min, max, step, default: value });
 const scale = (label, value = 1) => parameter(label, 0.05, 10, 0.01, value);
+const winding = (label, value) => Object.freeze({ ...parameter(label, 1, 12, 1, value), integer: true });
 
 function curve(id, name, family, equation, description, parameters, domain, closed) {
   return Object.freeze({
@@ -43,6 +44,12 @@ export const CURVE_LIST = Object.freeze([
     { a: parameter("a · curvature rate", -2, 2, 0.01, 1) }, [-6, 6], false),
   curve("helix", "Circular helix", "Space curves", "x = r cos t; y = r sin t; z = pt", "A three-dimensional helix; pitch is vertical distance per radian.",
     { radius: scale("r · radius"), pitch: parameter("p · rise per radian", -1, 1, 0.01, 0.15) }, [0, 2 * TAU], false),
+  curve("lissajous", "Lissajous figure", "Harmonic curves", "x = A sin(at + δ); y = B sin(bt)", "Two perpendicular sinusoidal motions with integer frequencies; closed over 0…2π, with possible crossings or zero-speed reversals.",
+    { A: scale("A · horizontal amplitude", 1.5), B: scale("B · vertical amplitude"), a: winding("a · horizontal frequency", 3), b: winding("b · vertical frequency", 2), delta: parameter("δ · phase offset", -Math.PI, Math.PI, 0.01, Math.PI / 2) }, [0, TAU], true),
+  curve("torus-knot", "Torus knot", "Space curves", "x = (R + r cos qt) cos pt; y = (R + r cos qt) sin pt; z = r sin qt", "A closed spatial winding on a ring torus (R > r). Coprime p,q give a single traversal; common factors retrace the reduced knot.",
+    { R: scale("R · major radius", 2), r: scale("r · tube radius", 0.65), p: winding("p · azimuthal turns", 2), q: winding("q · tube turns", 3) }, [0, TAU], true),
+  curve("joukowsky", "Joukowsky airfoil / mapped circle", "Complex mappings", "z = cx + i cy + ρ exp(it); w = z + a²/z", "A mapped source circle; defaults form a symmetric cusped airfoil. Other settings may self-intersect; the source circle must avoid z = 0.",
+    { cx: parameter("cx · source center x", -2, 2, 0.01, -0.1), cy: parameter("cy · source center y", -2, 2, 0.01, 0), rho: scale("ρ · source radius", 1.1), a: parameter("a · mapping scale", 0, 3, 0.01, 1) }, [0, TAU], true),
 ]);
 
 export const CURVES = Object.freeze(Object.fromEntries(CURVE_LIST.map((entry) => [entry.id, entry])));
@@ -70,6 +77,16 @@ function curveParameters(id, params) {
   const resolved = {};
   for (const [key, schema] of Object.entries(definition.parameters)) {
     resolved[key] = number(params[key] === undefined ? schema.default : params[key], key, schema.min, schema.max);
+    if (schema.integer && !Number.isInteger(resolved[key])) throw new RangeError(`${key} must be an integer`);
+  }
+  if (id === "torus-knot" && resolved.R <= resolved.r) throw new RangeError("A torus knot requires R > r");
+  if (id === "joukowsky") {
+    const centerDistance = Math.hypot(resolved.cx, resolved.cy);
+    // Check the entire source circle, including poles between sampling nodes.
+    const clearance = Math.abs(centerDistance - resolved.rho);
+    if (clearance <= 1e-6 * Math.max(1, centerDistance, resolved.rho)) {
+      throw new RangeError("Joukowsky source circle must stay away from z = 0 (relative clearance > 1e-6)");
+    }
   }
   return resolved;
 }
@@ -205,6 +222,28 @@ function curveJet(id, p, t) {
       return { point: clothoidPoint(p.a, t), first: [Math.cos(angle), Math.sin(angle)], second: [-p.a * t * Math.sin(angle), p.a * t * Math.cos(angle)] };
     }
     case "helix": return { point: [p.radius * c, p.radius * s, p.pitch * t], first: [-p.radius * s, p.radius * c, p.pitch], second: [-p.radius * c, -p.radius * s, 0] };
+    case "lissajous": {
+      const x = p.A * Math.sin(p.a * t + p.delta), y = p.B * Math.sin(p.b * t);
+      return { point: [x, y], first: [p.A * p.a * Math.cos(p.a * t + p.delta), p.B * p.b * Math.cos(p.b * t)], second: [-p.a * p.a * x, -p.b * p.b * y] };
+    }
+    case "torus-knot": {
+      const cp = Math.cos(p.p * t), sp = Math.sin(p.p * t), cq = Math.cos(p.q * t), sq = Math.sin(p.q * t);
+      const radius = p.R + p.r * cq, first = -p.r * p.q * sq, second = -p.r * p.q * p.q * cq;
+      return {
+        point: [radius * cp, radius * sp, p.r * sq],
+        first: [first * cp - p.p * radius * sp, first * sp + p.p * radius * cp, p.r * p.q * cq],
+        second: [(second - p.p * p.p * radius) * cp - 2 * p.p * first * sp, (second - p.p * p.p * radius) * sp + 2 * p.p * first * cp, -p.r * p.q * p.q * sq],
+      };
+    }
+    case "joukowsky": {
+      const u = [p.cx + p.rho * c, -p.rho * s, -p.rho * c];
+      const v = [p.cy + p.rho * s, p.rho * c, -p.rho * s];
+      const denominator = [u[0] ** 2 + v[0] ** 2, 2 * (u[0] * u[1] + v[0] * v[1]), 2 * (u[1] ** 2 + v[1] ** 2 + u[0] * u[2] + v[0] * v[2])];
+      // Re(w) = u + a²u/|z|²; Im(w) = v − a²v/|z|².
+      // quotientJet differentiates both components analytically twice.
+      const x = quotientJet(u, denominator), y = quotientJet(v, denominator), a2 = p.a * p.a;
+      return { point: [u[0] + a2 * x[0], v[0] - a2 * y[0]], first: [u[1] + a2 * x[1], v[1] - a2 * y[1]], second: [u[2] + a2 * x[2], v[2] - a2 * y[2]] };
+    }
     default: throw new RangeError(`Unknown curve: ${id}`);
   }
 }

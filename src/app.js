@@ -136,11 +136,11 @@ function startWorker() {
   } catch { worker = null; }
 }
 
-function primaryChannels(id) {
+function primaryChannels(id, is3D) {
   if (state.unwrap.channelSet === "moving-frame") return ["vx", "vy", "normalX", "normalY", "curvatureRadius", "speed"];
   if (id === "circle") return ["sin", "cos", "tan", "cot", "sec", "csc"];
   if (id === "hyperbola") return ["cosh", "sinh", "tanh", "sech", "csch", "coth"];
-  if (id === "helix") return ["x", "y", "z", "tangentX", "tangentY", "curvature"];
+  if (is3D) return ["x", "y", "z", "tangentX", "tangentY", "curvature"];
   return ["x", "y", "tangentX", "tangentY", "speed", "curvature"];
 }
 function channelValues(sample, name) {
@@ -178,9 +178,10 @@ function prepareCurve() {
           for (const [name, value] of Object.entries(frame.channels)) (sample.channels[name] ??= []).push(value);
         }
       }
+      const is3D = sample.points[0].length === 3;
       // The geometry API supplies a left normal for plane curves and unsigned κ.
       // Orient it toward dT/dt so N/κ is the actual curvature-center vector.
-      if (u.id !== "helix") for (let i = 0; i < count; i += 1) {
+      if (!is3D) for (let i = 0; i < count; i += 1) {
         const a = Math.max(0, i - 1), b = Math.min(count - 1, i + 1);
         const tx = sample.channels.tangentX[i], ty = sample.channels.tangentY[i];
         const dx = sample.channels.tangentX[b] - sample.channels.tangentX[a];
@@ -190,7 +191,7 @@ function prepareCurve() {
         }
       }
       const points = sample.points.map(projectHelix);
-      const channels = primaryChannels(u.id).map((name) => {
+      const channels = primaryChannels(u.id, is3D).map((name) => {
         const values = [...channelValues(sample, name)], poles = channelPoles(u.id, name, u.domain);
         for (const pole of poles) { const index = pole * (count - 1); values[Math.floor(index)] = null; values[Math.ceil(index)] = null; }
         const max = values.reduce((m, v) => Number.isFinite(v) ? Math.max(m, Math.abs(v)) : m, 0);
@@ -198,7 +199,7 @@ function prepareCurve() {
         const range = Math.max(.01, ratio ? Math.min(6, max) : max * 1.08);
         return { name, range, clipped: max > range, poles, values: values.map((v, i) => Number.isFinite(v) ? [i / (count - 1), v] : null) };
       });
-      data = { points, rawPoints: sample.points, channels, bounds: boundsOf(points), is3D: u.id === "helix", domain: [...u.domain] };
+      data = { points, rawPoints: sample.points, channels, bounds: boundsOf(points), is3D, domain: [...u.domain] };
       if (u.cache.size >= 12) u.cache.delete(u.cache.keys().next().value);
       u.cache.set(key, data);
     }

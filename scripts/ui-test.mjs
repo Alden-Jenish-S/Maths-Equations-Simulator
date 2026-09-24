@@ -176,7 +176,7 @@ globalThis.fetch = async (url) => { assert.equal(url, "data/discoveries.json"); 
 const { state, makeScene, ready, buildMotionBins } = await import("../src/app.js");
 await ready; await tick();
 assert(!state.playing, "reduced motion must start paused");
-assert.equal(modeButtons.length, 6); assert.equal(CURVE_LIST.length, 14); assert.equal(HARMONIC_PRESET_LIST.length, 6);
+assert.equal(modeButtons.length, 6); assert.equal(CURVE_LIST.length, 17); assert.equal(HARMONIC_PRESET_LIST.length, 6);
 assert(state.atlas.replay); assert.equal(jobs.length, 0, "stored Hénon should not be relabelled as a fresh worker run");
 assert.match($("config-summary").textContent, /stored discovery replay.*5 persisted.*7000 original/);
 assert.match(state.atlas.motion.label, /step displacement/);
@@ -366,7 +366,7 @@ doc.hidden = false; await doc.emit("visibilitychange"); assert(state.fourier.mut
 const metricWrites = mutations.filter((m) => m.id === "metrics-grid");
 for (let i = 1; i < metricWrites.length; i += 1) assert(metricWrites[i].at - metricWrites[i - 1].at >= 200, "telemetry exceeded 5 Hz");
 for (const palette of Object.keys(STUDIO_PALETTES)) { await input("theme-select", palette, "change"); assert.equal(state.palette, palette); render(360, 1200); }
-console.log("UI_TEST_PASS modes=6 curves=14 presets=6 live=5 palettes=5");
+console.log("UI_TEST_PASS modes=6 curves=17 presets=6 live=5 palettes=5");
 console.log("UI_STREAM_PASS fixed_dt=1/120 history<=900 synchronous=true pole_gaps=true loop_gaps=true edit_resets=true");
 console.log("UI_GEOMETRY_PASS channels=vx,vy,normalX,normalY,curvatureRadius,speed radius=N/kappa coordinates=xyz");
 console.log("UI_LIFECYCLE_PASS stale_worker=ignored family_race=cleared stored_replay=labelled audio_mute=verified png_callback=verified telemetry<=5Hz");

@@ -6,7 +6,7 @@ module implements the exact boundary in `docs/IMPLEMENTATION-CONTRACT.md`.
 
 ## Curves
 
-`CURVE_LIST` is the ordered list of fourteen descriptors and `CURVES` is the
+`CURVE_LIST` is the ordered list of seventeen descriptors and `CURVES` is the
 id-indexed lookup:
 
 ```js
@@ -56,6 +56,33 @@ curvature. The normal is the left planar normal for two-dimensional curves. In
 3D it is the normalized component of the second derivative perpendicular to
 the tangent, which is Frenet-like and remains well-defined for the helix. It
 does not provide a binormal because the contract exposes only `normal`.
+
+### Research additions
+
+The catalogue also includes three closed-domain additions that use the same
+`curveFrame`/`sampleCurve` jet interface:
+
+- **Lissajous figure**: `x = A sin(at + δ)`, `y = B sin(bt)`, with positive
+  integer frequencies `a` and `b` and `[0, 2π]` domain. The first and second
+  derivatives are evaluated directly from the two sinusoidal components.
+- **Torus knot**: `x = (R + r cos(qt)) cos(pt)`,
+  `y = (R + r cos(qt)) sin(pt)`, `z = r sin(qt)`, with integer winding counts,
+  `R > r`, and `[0, 2π]` domain. The derivative jet differentiates the radial
+  factor before applying the planar polar product rule. Coprime `p,q` give a
+  single traversal; non-coprime choices intentionally retrace a reduced knot.
+- **Joukowsky mapped circle**: `z(t) = cx + i cy + ρ exp(it)` and
+  `w = z + a²/z`, returned as `[Re(w), Im(w)]`. The quotient derivatives are
+  analytic through second order. The source circle must not pass through the
+  pole `z = 0`; circles that enclose the pole remain valid closed contours, and
+  zero-speed mapped cusps are reported with null curvature rather than guessed.
+
+The equations and terminology were checked against Wolfram MathWorld's
+[Lissajous Curve](https://mathworld.wolfram.com/LissajousCurve.html) and
+[Torus Knot](https://mathworld.wolfram.com/TorusKnot.html) entries, and NASA
+Glenn's [Conformal Mapping](https://www.grc.nasa.gov/www/k-12/airplane/map.html)
+airfoil tutorial. These references motivate the displayed equations; the
+implementation remains a finite-precision visual sampler, not a claim about
+physical airflow or knot classification beyond the selected integer winding.
 
 ## Spirographs
 
