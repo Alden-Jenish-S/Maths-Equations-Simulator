@@ -173,6 +173,21 @@ for (const system of SYSTEM_LIST) {
   replay(roundTrip(original));
 }
 
+// Finite API parameters outside the UI box are supported. Missing analytical
+// bounds/periods must not introduce Infinity into otherwise replayable records.
+for (const [family, parameters, field] of [
+  ["ikeda", { u: 1 }, "absorbingRadius"],
+  ["ikeda", { u: 1.2 }, "absorbingRadius"],
+  ["duffing", { omega: 0 }, "forcingPeriod"],
+  ["duffing", { omega: Number.MIN_VALUE }, "forcingPeriod"],
+]) {
+  const candidate = evaluateCandidate(getSystem(family), parameters, { burnIn: 0, steps: 512 });
+  assert.equal(candidate.metadata[field], null);
+  assertCandidate(candidate); replay(roundTrip(candidate));
+}
+const negativeFrequency = evaluateCandidate(getSystem("duffing"), { omega: -2 }, { burnIn: 0, steps: 512 });
+assert.equal(negativeFrequency.metadata.forcingPeriod, Math.PI);
+
 const lorenz = stored.candidateAudit.find((candidate) => candidate.family === "lorenz");
 for (const changes of [{ dt: lorenz.config.dt / 2 }, { seed: seed + 1 }, { coordinateScale: [31, 30] }, { maxPeriod: 47 }]) {
   const changed = evaluateCandidate(getSystem("lorenz"), lorenz.parameters, { ...lorenz.config, ...changes });

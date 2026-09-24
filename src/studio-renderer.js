@@ -32,7 +32,7 @@ export function boundsOf(points = []) {
   return { minX: minX - pad, maxX: maxX + pad, minY: minY - pad, maxY: maxY + pad, width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 };
 }
 export function project(point, bounds, width, height, margin = 28) {
-  const scale = Math.max(.0001, Math.min((width - margin * 2) / bounds.width, (height - margin * 2) / bounds.height));
+  const scale = Math.min(Math.max(1, width - margin * 2) / bounds.width, Math.max(1, height - margin * 2) / bounds.height);
   return [width / 2 + (point[0] - (bounds.minX + bounds.maxX) / 2) * scale, height / 2 - (point[1] - (bounds.minY + bounds.maxY) / 2) * scale];
 }
 export const projectHelix = (p) => p?.length > 2 ? [p[0] * .82 - p[1] * .48, p[2] + p[0] * .26 + p[1] * .43] : p;

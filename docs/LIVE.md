@@ -105,7 +105,7 @@ Declared parameters must be finite numbers in their schema range. Missing/`undef
 
 On a **computed numerical or clock guard failure**, the numerical fields and history remain at their last valid values. The state is marked `diverged: true` with a `reason`, and `advanceLive` throws `RangeError` without emitting a point. Further advances also throw until the caller resets. There is no angle/velocity clipping, wrapping of numerical state, time reset, or fabricated continuation. A guard can reject a large but physically legitimate motion; it is an operational limit, not proof of mathematical divergence or chaos.
 
-**Current UI limitation:** the double-pendulum view catches and displays its own divergence status. The live-source animation branch currently does not catch `advanceLive` errors or show a dedicated guard overlay. A live guard therefore interrupts that frame with an exception and preserves the finite prefix; the playback label may still read “playing.” Restart or reselect the source to reset it. API callers should catch errors and display `state.reason`.
+The live-source animation branch catches guard errors, pauses playback, and displays a frozen status and the failure reason. The last finite state and visible prefix remain available for inspection. Restart or reselect the source to clear the frozen state and overlay. API callers should likewise catch errors and display `state.reason`.
 
 ### Retained history and parameter edits
 

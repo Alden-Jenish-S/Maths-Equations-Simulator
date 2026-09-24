@@ -45,7 +45,8 @@ The vector-field divergence is the constant
 Range: `δ ∈ [0.02,0.5]`, `α ∈ [-1,1]`, `β ∈ [0.1,2]`,
 `γ ∈ [0,3]`, `ω ∈ [0.5,2.5]`; reference `dt=0.02`. The integrated state is
 `(x,v,t)` with `v=ẋ`; the public display projection remains `[x,v]` for
-compatibility. The forcing period is `2π/ω`. For the unforced system, the
+compatibility. The forcing period is `2π/|ω|`; the API reports `null` when
+`ω=0` or the period exceeds the finite numerical range. For the unforced system, the
 Hamiltonian is
 
 \[
@@ -69,6 +70,8 @@ The area multiplier is `u²`. For `u<1`, the affine radius inequality gives the
 absorbing bound `r ≤ 1/(1-u)`, which is checked for the reference trajectory.
 The original API's finite-value clamp to `[0,1.2]` is retained; non-finite `u`
 is rejected before clamping.
+For `u >= 1`, `metadata.absorbingRadius` is `null` because this inequality
+provides no finite absorbing bound; the simulation's escape guard still applies.
 
 ### Clifford attractor
 

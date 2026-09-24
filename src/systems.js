@@ -293,7 +293,10 @@ export const SYSTEMS = {
           1,
         ],
         (state) => [state[0], state[1]],
-        ({ omega }) => ({ forcingPeriod: (2 * Math.PI) / omega }),
+        ({ omega }) => {
+          const period = (2 * Math.PI) / Math.abs(omega);
+          return { forcingPeriod: Number.isFinite(period) ? period : null };
+        },
         2,
       );
     },
@@ -325,7 +328,7 @@ export const SYSTEMS = {
         },
         ({ u }) => ({
           jacobianDeterminant: u * u,
-          absorbingRadius: u < 1 ? 1 / (1 - u) : Infinity,
+          absorbingRadius: u < 1 ? 1 / (1 - u) : null,
         }),
       );
     },

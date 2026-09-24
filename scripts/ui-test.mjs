@@ -10,7 +10,7 @@ import { CURVE_LIST, curveFrame } from "../src/art-modes.js";
 import { SYSTEM_LIST, SYSTEMS } from "../src/systems.js";
 import { HARMONIC_PRESET_LIST, evaluateHarmonics } from "../src/audio.js";
 import { LIVE_SYSTEM_LIST } from "../src/live.js";
-import { renderStudio, curvatureGeometry, STUDIO_PALETTES } from "../src/studio-renderer.js";
+import { renderStudio, curvatureGeometry, STUDIO_PALETTES, project } from "../src/studio-renderer.js";
 import { simulateAtlasRequest } from "../src/simulation-worker.js";
 
 const near = (a, b, label, tolerance = 1e-8) => assert(Math.abs(a - b) <= tolerance, `${label}: ${a} ≠ ${b}`);
@@ -252,6 +252,21 @@ await input("curve-select", "parabola", "change"); await input("curve-parameter-
 assert(curvatureGeometry(state.unwrap.frame).center[1] < 0, "normal must face the concave side for negative curvature orientation");
 await input("curve-parameter-a", 0); assert.equal(curvatureGeometry(state.unwrap.frame), null); render();
 
+// Supported large-coordinate domains must still fit the geometry viewport.
+await input("curve-select", "hyperbola", "change");
+await input("domain-end", 100, "change"); await input("domain-start", 96, "change");
+assert(!state.unwrap.error);
+for (const point of state.unwrap.data.points) {
+  const [x, y] = project(point, state.unwrap.data.bounds, 960, 570);
+  assert(x >= 0 && x <= 960 && y >= 0 && y <= 570, "valid geometry escaped its fitted viewport");
+}
+await input("curve-select", "clothoid", "change");
+await input("domain-start", -32, "change"); await input("domain-end", 32, "change");
+for (const phase of [0, 1]) {
+  await input("phase-control", phase);
+  assert(!state.unwrap.error, "display normal probes left the valid clothoid domain"); render();
+}
+
 // Genuine, synchronous history: same samples under two frame cadences, regular
 // timestamps, moving x-axis, pole/loop breaks, bounded records, pause stability.
 await input("curve-select", "circle", "change"); await input("channel-set-select", "function", "change");
@@ -319,6 +334,22 @@ for (const source of LIVE_SYSTEM_LIST) {
   assert(state.live.points.every((point) => point.every(Number.isFinite)), source.id);
   const key = Object.keys(source.parameters)[0]; await input(`live-parameter-${key}`, source.parameters[key].min); assert.equal(state.live.params[key], source.parameters[key].min); render();
 }
+
+// A computed live guard must pause visibly without losing the last valid sample
+// or killing the animation callback. Restart must clear the frozen status.
+await input("live-system-select", "pendulum", "change");
+state.live.model.theta = 99.99; state.live.model.velocity = 100;
+await input("live-parameter-damping", 0);
+const guardedState = structuredClone(state.live.model), guardedPoints = structuredClone(state.live.points);
+await tick(2);
+assert(state.live.model.diverged); assert(!state.playing);
+assert.deepEqual(state.live.points, guardedPoints);
+for (const key of ["t", "theta", "velocity", "history"]) assert.deepEqual(state.live.model[key], guardedState[key]);
+assert.match($("canvas-overlay").textContent, /guard/i);
+await elapse(210); assert.match($("class-badge").textContent, /frozen/i);
+await $("restart-button").click();
+assert(!state.live.model.diverged); assert.equal($("canvas-overlay").textContent, "");
+await $("playback-button").click(); await tick(2); assert(state.live.model.t > 0);
 
 // PNG must be a new high-resolution rendering, and download happens only once
 // its asynchronous toBlob callback has returned a blob.

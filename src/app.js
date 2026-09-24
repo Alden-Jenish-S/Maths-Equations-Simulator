@@ -218,7 +218,7 @@ function updateCurveFrame() {
     u.frame = curveFrame(u.id, u.params, t);
     const f = u.frame;
     if (f.point.length === 2 && f.speed > 1e-12 && f.curvature > 1e-12) {
-      const h = 1e-5, before = curveFrame(u.id, u.params, t - h), after = curveFrame(u.id, u.params, t + h);
+      const h = 1e-5, before = curveFrame(u.id, u.params, Math.max(u.domain[0], t - h)), after = curveFrame(u.id, u.params, Math.min(u.domain[1], t + h));
       const turn = f.tangent[0] * (after.tangent[1] - before.tangent[1]) - f.tangent[1] * (after.tangent[0] - before.tangent[0]);
       if (turn < 0) f.normal = f.normal.map((v) => -v);
     }
@@ -377,7 +377,7 @@ function resetPendulum() {
 function resetLive() {
   const live = state.live; live.model = createLiveState(live.id); live.accumulator = 0; live.dropped = 0;
   live.points = rebuildLiveWindow(live.id, live.model, live.params, 1);
-  if (state.mode === "live") sceneText(); invalidate();
+  if (state.mode === "live") { overlay(); status("Live source ready"); sceneText(); } invalidate();
 }
 function liveControls() {
   const l = state.live, source = getLiveSystem(l.id); $("live-description").textContent = source.description;
@@ -514,7 +514,9 @@ function telemetry() {
     );
     $("class-badge").textContent = f.diverged ? "diverged" : "RK4 dynamics"; $("class-badge").className = `class-badge ${f.diverged ? "error" : ""}`;
   } else {
-    const l = state.live, source = getLiveSystem(l.id); cards.push(["elapsed", `${fmt(l.model?.t ?? 0, 2)} s`, "source clock"], ["buffer", l.points.length.toLocaleString(), "max 1,800"], ["step", fmt(source.dt, 4), "fixed numerical step"], ["status", state.playing ? "streaming" : "paused", "shared transport"]); $("class-badge").textContent = "live signal";
+    const l = state.live, source = getLiveSystem(l.id), frozen = l.model?.diverged;
+    cards.push(["elapsed", `${fmt(l.model?.t ?? 0, 2)} s`, "source clock"], ["buffer", l.points.length.toLocaleString(), "max 1,800"], ["step", fmt(source.dt, 4), "fixed numerical step"], ["status", frozen ? "frozen" : state.playing ? "streaming" : "paused", "shared transport"]);
+    $("class-badge").textContent = frozen ? "live source frozen" : "live signal"; $("class-badge").className = `class-badge ${frozen ? "error" : ""}`;
     const livePoint = l.points.at(-1); updateCoordinateReadout(source.view === "xy" ? livePoint : [livePoint?.[0], livePoint?.[1], livePoint?.[2]], `source ${source.view}`);
   }
   if (state.mode === "atlas") {
@@ -558,7 +560,15 @@ function advance(dt) {
     return;
   }
   const l = state.live, source = getLiveSystem(l.id); l.accumulator += delta; let steps = 0;
-  while (l.accumulator >= source.dt && steps < 40) { const next = advanceLive(l.id, l.model, l.params, source.dt); l.points.push(next.point); l.accumulator -= source.dt; steps += 1; }
+  while (l.accumulator >= source.dt && steps < 40) {
+    try {
+      const next = advanceLive(l.id, l.model, l.params, source.dt);
+      l.points.push(next.point); l.accumulator -= source.dt; steps += 1;
+    } catch (error) {
+      l.model.diverged = true; l.model.reason = error.message; l.accumulator = 0;
+      overlay(`${error.message}. Reset or reselect the source to resume.`); status("Live source frozen", "error"); setPlaying(false); break;
+    }
+  }
   if (l.accumulator >= source.dt) { l.accumulator = 0; l.dropped += 1; } if (l.points.length > 1800) l.points.splice(0, l.points.length - 1800);
 }
 function schedule() { if (!state.raf && !document.hidden) state.raf = requestAnimationFrame(frame); }
